@@ -178,11 +178,10 @@ header .ib:active{background:var(--user)}
 <script>
 window.onerror=function(m,src,l,c){var e=document.getElementById("errbox");e.style.display="block";e.textContent+="JS error: "+m+" (line "+l+")\n";return false};
 setTimeout(function(){var sp=document.getElementById("splash");if(sp)sp.classList.add("out")},1800);
-window.__boot=1;
+window.__boot=1;window.__v="v4";
 </script>
 
-<script>
-try{
+<script type="text/plain" id="mainsrc">
 (function(){
   var $=function(id){return document.getElementById(id)};
   var hasBridge=typeof Android!=="undefined";
@@ -346,6 +345,4 @@ try{
   function setBusy(b){
     busy=b;
     sendBtn.innerHTML=b?STOP:UP;
-    sendBtn.disabled=b?false:!inp.value.trim();
-  }
-  inp.addEventListener("inpu
+    sendBtn.disabled=b?false:!inp.valu
