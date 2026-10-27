@@ -62,14 +62,7 @@ public class MainActivity extends Activity {
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setVerticalScrollBarEnabled(false);
 
-        web.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView v, String url) {
-                v.postDelayed(() -> v.evaluateJavascript(
-                        "'v='+(window.__v||'old')+' files='+(window.__f||'-')+' scripts='+document.scripts.length+' init='+(window.__ok||'NO')",
-                        val -> Toast.makeText(MainActivity.this, "JS: " + val, Toast.LENGTH_LONG).show()), 3000);
-            }
-        });
+        web.setWebViewClient(new WebViewClient());
         web.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onConsoleMessage(ConsoleMessage m) {
@@ -169,26 +162,48 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void send(final String id, final String apiKey, final String model, final String messagesJson) {
+        public void send(final String id, final String provider, final String apiKey, final String model, final String messagesJson) {
             activeId = id;
+            final boolean gemini = "gemini".equals(provider);
             new Thread(() -> {
                 HttpURLConnection c = null;
                 try {
+                    JSONArray msgs = new JSONArray(messagesJson);
                     JSONObject body = new JSONObject();
-                    body.put("model", model);
-                    body.put("max_tokens", 4096);
-                    body.put("stream", true);
-                    body.put("messages", new JSONArray(messagesJson));
+                    String endpoint;
+                    if (gemini) {
+                        JSONArray contents = new JSONArray();
+                        for (int i = 0; i < msgs.length(); i++) {
+                            JSONObject m = msgs.getJSONObject(i);
+                            JSONObject part = new JSONObject().put("text", m.optString("content"));
+                            contents.put(new JSONObject()
+                                    .put("role", "assistant".equals(m.optString("role")) ? "model" : "user")
+                                    .put("parts", new JSONArray().put(part)));
+                        }
+                        body.put("contents", contents);
+                        endpoint = "https://generativelanguage.googleapis.com/v1beta/models/"
+                                + Uri.encode(model) + ":streamGenerateContent?alt=sse";
+                    } else {
+                        body.put("model", model);
+                        body.put("max_tokens", 4096);
+                        body.put("stream", true);
+                        body.put("messages", msgs);
+                        endpoint = "https://api.anthropic.com/v1/messages";
+                    }
 
-                    c = (HttpURLConnection) new URL("https://api.anthropic.com/v1/messages").openConnection();
+                    c = (HttpURLConnection) new URL(endpoint).openConnection();
                     active = c;
                     c.setRequestMethod("POST");
                     c.setConnectTimeout(20000);
                     c.setReadTimeout(120000);
                     c.setDoOutput(true);
                     c.setRequestProperty("content-type", "application/json");
-                    c.setRequestProperty("x-api-key", apiKey);
-                    c.setRequestProperty("anthropic-version", "2023-06-01");
+                    if (gemini) {
+                        c.setRequestProperty("x-goog-api-key", apiKey);
+                    } else {
+                        c.setRequestProperty("x-api-key", apiKey);
+                        c.setRequestProperty("anthropic-version", "2023-06-01");
+                    }
 
                     OutputStream os = c.getOutputStream();
                     os.write(body.toString().getBytes("UTF-8"));
@@ -198,7 +213,9 @@ public class MainActivity extends Activity {
                     if (code >= 400) {
                         String msg = "Error " + code;
                         try {
-                            JSONObject e = new JSONObject(readAll(c.getErrorStream())).optJSONObject("error");
+                            String raw = readAll(c.getErrorStream()).trim();
+                            JSONObject o = raw.startsWith("[") ? new JSONArray(raw).getJSONObject(0) : new JSONObject(raw);
+                            JSONObject e = o.optJSONObject("error");
                             if (e != null) msg = e.optString("message", msg);
                         } catch (Exception ignored) {}
                         js("onErr", id, msg);
@@ -213,18 +230,41 @@ public class MainActivity extends Activity {
                         String data = line.substring(5).trim();
                         if (data.isEmpty()) continue;
                         JSONObject j = new JSONObject(data);
-                        String type = j.optString("type");
-                        if ("content_block_delta".equals(type)) {
-                            JSONObject d = j.optJSONObject("delta");
-                            if (d != null && "text_delta".equals(d.optString("type"))) {
-                                js("onDelta", id, d.optString("text"));
+                        if (gemini) {
+                            JSONObject err = j.optJSONObject("error");
+                            if (err != null) { js("onErr", id, err.optString("message", "Error")); return; }
+                            JSONObject pf = j.optJSONObject("promptFeedback");
+                            if (pf != null && pf.has("blockReason")) {
+                                js("onErr", id, "Blocked: " + pf.optString("blockReason"));
+                                return;
                             }
-                        } else if ("error".equals(type)) {
-                            JSONObject e = j.optJSONObject("error");
-                            js("onErr", id, e != null ? e.optString("message", "Error") : "Error");
-                            return;
-                        } else if ("message_stop".equals(type)) {
-                            break;
+                            JSONArray cand = j.optJSONArray("candidates");
+                            if (cand != null && cand.length() > 0) {
+                                JSONObject content = cand.getJSONObject(0).optJSONObject("content");
+                                JSONArray parts = content != null ? content.optJSONArray("parts") : null;
+                                if (parts != null) {
+                                    for (int i = 0; i < parts.length(); i++) {
+                                        JSONObject p = parts.getJSONObject(i);
+                                        if (p.optBoolean("thought", false)) continue;
+                                        String t = p.optString("text", "");
+                                        if (!t.isEmpty()) js("onDelta", id, t);
+                                    }
+                                }
+                            }
+                        } else {
+                            String type = j.optString("type");
+                            if ("content_block_delta".equals(type)) {
+                                JSONObject d = j.optJSONObject("delta");
+                                if (d != null && "text_delta".equals(d.optString("type"))) {
+                                    js("onDelta", id, d.optString("text"));
+                                }
+                            } else if ("error".equals(type)) {
+                                JSONObject e = j.optJSONObject("error");
+                                js("onErr", id, e != null ? e.optString("message", "Error") : "Error");
+                                return;
+                            } else if ("message_stop".equals(type)) {
+                                break;
+                            }
                         }
                     }
                     br.close();
@@ -244,4 +284,4 @@ public class MainActivity extends Activity {
             if (!"true".equals(value)) finish();
         });
     }
-}
+                            }
