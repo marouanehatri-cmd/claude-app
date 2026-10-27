@@ -12,7 +12,11 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.View;
 import android.view.Window;
+import android.app.AlertDialog;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.JsResult;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -58,7 +62,38 @@ public class MainActivity extends Activity {
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setVerticalScrollBarEnabled(false);
 
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView v, String url) {
+                v.postDelayed(() -> v.evaluateJavascript(
+                        "(window.__boot?'boot=1':'boot=0')+' init='+(window.__ok||'NO')",
+                        val -> Toast.makeText(MainActivity.this, "JS: " + val, Toast.LENGTH_LONG).show()), 3000);
+            }
+        });
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage m) {
+                if (m.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    Toast.makeText(MainActivity.this, "JS error: " + m.message() + " (line " + m.lineNumber() + ")", Toast.LENGTH_LONG).show();
+                }
+                return true;
+            }
+            @Override
+            public boolean onJsAlert(WebView v, String url, String message, final JsResult r) {
+                new AlertDialog.Builder(MainActivity.this).setMessage(message)
+                        .setPositiveButton("OK", (dlg, which) -> r.confirm())
+                        .setOnCancelListener(dlg -> r.cancel()).show();
+                return true;
+            }
+            @Override
+            public boolean onJsConfirm(WebView v, String url, String message, final JsResult r) {
+                new AlertDialog.Builder(MainActivity.this).setMessage(message)
+                        .setPositiveButton("OK", (dlg, which) -> r.confirm())
+                        .setNegativeButton("Cancel", (dlg, which) -> r.cancel())
+                        .setOnCancelListener(dlg -> r.cancel()).show();
+                return true;
+            }
+        });
         web.addJavascriptInterface(new Bridge(), "Android");
         web.loadUrl("file:///android_asset/chat.html");
     }
