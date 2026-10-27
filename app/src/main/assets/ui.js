@@ -56,10 +56,31 @@ function newChat(){
 window.__stage="drawer";
 function openDrawer(){renderList();$("drawer").classList.add("on");$("scrim").classList.add("on")}
 function closeDrawer(){$("drawer").classList.remove("on");$("scrim").classList.remove("on")}
+var MODELS={gemini:["gemini-flash-latest","gemini-3.5-flash","gemini-2.5-flash","gemini-flash-lite-latest"],claude:["claude-sonnet-5-5","claude-opus-5-5","claude-haiku-5-5"]};
+var shown="gemini";
+function fillSheet(p){
+  shown=p;
+  $("provSel").value=p;
+  $("keyInp").value=settings.keys[p]||"";
+  $("keyInp").placeholder=p==="gemini"?"AIza...":"sk-ant-...";
+  $("modelInp").value=settings.models[p]||DEF.models[p];
+  var h="";for(var i=0;i<MODELS[p].length;i++)h+='<option value="'+MODELS[p][i]+'">';
+  $("models").innerHTML=h;
+  $("keyHint").textContent=p==="gemini"?"Get a free key: aistudio.google.com/apikey":"Get a key: console.anthropic.com/settings/keys";
+}
 function openSheet(){
-  $("keyInp").value=settings.key;$("modelInp").value=settings.model;$("themeSel").value=settings.theme;
+  fillSheet(settings.provider);$("themeSel").value=settings.theme;
   $("sheet").classList.add("on");$("scrim2").classList.add("on");
 }
+$("provSel").onchange=function(){
+  settings.keys[shown]=$("keyInp").value.trim();
+  settings.models[shown]=$("modelInp").value.trim()||DEF.models[shown];
+  fillSheet($("provSel").value);
+};
+$("keyHint").onclick=function(){
+  var u=shown==="gemini"?"https://aistudio.google.com/apikey":"https://console.anthropic.com/settings/keys";
+  try{hasBridge&&Android.openUrl(u)}catch(e){}
+};
 function closeSheet(){$("sheet").classList.remove("on");$("scrim2").classList.remove("on")}
 $("menuBtn").onclick=openDrawer;
 $("scrim").onclick=closeDrawer;
@@ -68,15 +89,16 @@ $("newBtn").onclick=function(){newChat();buzz(10)};
 $("drawerNew").onclick=function(){newChat();closeDrawer()};
 $("openSettings").onclick=function(){closeDrawer();openSheet()};
 $("saveSet").onclick=function(){
-  settings.key=$("keyInp").value.trim();
-  settings.model=$("modelInp").value.trim()||DEF.model;
+  settings.keys[shown]=$("keyInp").value.trim();
+  settings.models[shown]=$("modelInp").value.trim()||DEF.models[shown];
+  settings.provider=$("provSel").value;
   settings.theme=$("themeSel").value;
   save("claude_settings",settings);applyTheme();closeSheet();toast("Saved");
 };
 $("clearAll").onclick=function(){
   if(confirm("Clear all chats?")){chats=[];cur=null;persist();renderList();renderChat();closeSheet();toast("Chats cleared")}
 };
-$("aboutBtn").onclick=function(){alert("Claude\nVersion 1.0\n\nA simple chat app powered by the Anthropic API.")};
+$("aboutBtn").onclick=function(){alert("Claude\nVersion 1.0\n\nPowered by Google Gemini or the Anthropic API.")};
 window.onBack=function(){
   if($("sheet").classList.contains("on")){closeSheet();return true}
   if($("drawer").classList.contains("on")){closeDrawer();return true}
