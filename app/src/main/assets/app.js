@@ -16,7 +16,7 @@ setBusy(false);
 function doSend(){
   var text=inp.value.trim();
   if(!text||busy)return;
-  if(!settings.key){toast("Add your API key in Settings");openSheet();return}
+  if(!settings.keys[settings.provider]){toast("Add your API key in Settings");openSheet();return}
   buzz(25);
   if(!getChat())newChat();
   var c=getChat();
@@ -30,7 +30,7 @@ function doSend(){
   var hist=c.msgs.filter(function(m){return !m.e}).map(function(m){return{role:m.r==="user"?"user":"assistant",content:m.t}});
   pending="r"+Date.now();
   if(hasBridge){
-    Android.send(pending,settings.key,settings.model,JSON.stringify(hist));
+    Android.send(pending,settings.provider,settings.keys[settings.provider],settings.models[settings.provider],JSON.stringify(hist));
   }else{
     var id=pending,words="Preview mode: streaming works on the device with the Android bridge.".split(" "),i=0;
     var iv=setInterval(function(){
