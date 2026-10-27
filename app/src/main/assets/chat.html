@@ -95,6 +95,9 @@ header .ib:active{background:var(--user)}
 /* splash / loading page */
 #splash{position:fixed;top:0;left:0;right:0;bottom:0;background:#D97757;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .45s}
 #splash.out{opacity:0;pointer-events:none}
+#splash{animation:splashOut .45s 2.4s forwards}
+@keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none}}
+#errbox{position:fixed;left:8px;right:8px;top:40px;z-index:200;background:#7a1f12;color:#fff;font:12px/1.4 monospace;padding:10px;border-radius:10px;display:none;white-space:pre-wrap;user-select:text;-webkit-user-select:text}
 #splash .lg{width:92px;height:92px;color:#fff;animation:pop 1s cubic-bezier(.3,.8,.3,1) both,pulse 1.6s 1s ease-in-out infinite}
 #splash h1{font-family:var(--serif);color:#fff;font-size:38px;font-weight:500;letter-spacing:-.8px;animation:fade .8s .35s both}
 @keyframes pop{from{transform:scale(.2) rotate(-180deg);opacity:0}to{transform:none;opacity:1}}
@@ -170,6 +173,11 @@ header .ib:active{background:var(--user)}
 </section>
 
 <div id="toast"></div>
+<div id="errbox"></div>
+<script>
+window.onerror=function(m,src,l,c){var e=document.getElementById("errbox");e.style.display="block";e.textContent+="JS error: "+m+" (line "+l+")\n";return false};
+setTimeout(function(){var sp=document.getElementById("splash");if(sp)sp.classList.add("out")},1800);
+</script>
 
 <script>
 (function(){
@@ -345,17 +353,4 @@ header .ib:active{background:var(--user)}
     buzz(25);
     if(!getChat())newChat();
     var c=getChat();
-    c.msgs.push({r:"user",t:text});
-    if(c.msgs.length===1)c.title=text.slice(0,40);
-    persist();
-    inp.value="";inp.style.height="auto";
-    $("welcome").style.display="none";
-    $("thread").appendChild(bubble("user",text));
-    sc=c;live=null;setBusy(true);showTyping();
-    var hist=c.msgs.filter(function(m){return !m.e}).map(function(m){return{role:m.r==="user"?"user":"assistant",content:m.t}});
-    pending="r"+Date.now();
-    if(hasBridge){
-      Android.send(pending,settings.key,settings.model,JSON.stringify(hist));
-    }else{
-      var id=pending,words="Preview mode: streaming works on the device with the Android bridge.".split(" "),i=0;
-      var iv=setI
+    c.msgs.push({r:"us
