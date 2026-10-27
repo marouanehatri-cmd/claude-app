@@ -59,10 +59,13 @@
 <section id="sheet">
   <div class="grab"></div>
   <h2>Claude Settings</h2>
+  <label>Provider</label>
+  <select id="provSel"><option value="gemini">Google Gemini (free)</option><option value="claude">Anthropic Claude (paid)</option></select>
   <label>API key</label>
-  <input id="keyInp" type="password" placeholder="sk-ant-..." autocomplete="off">
+  <input id="keyInp" type="password" placeholder="AIza..." autocomplete="off">
+  <div id="keyHint" class="hint"></div>
   <label>Model</label>
-  <input id="modelInp" type="text" list="models" placeholder="claude-sonnet-5-5" autocomplete="off">
+  <input id="modelInp" type="text" list="models" placeholder="gemini-flash-latest" autocomplete="off">
   <datalist id="models"><option value="claude-sonnet-5-5"><option value="claude-opus-5-5"><option value="claude-haiku-5-5"></datalist>
   <label>Theme</label>
   <select id="themeSel"><option value="auto">System</option><option value="light">Light</option><option value="dark">Dark</option></select>
