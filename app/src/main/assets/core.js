@@ -7,10 +7,16 @@ var STOP='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><r
 
 /* ---------- storage ---------- */
 window.__stage="storage";
-var DEF={key:"",model:"claude-sonnet-5-5",theme:"auto"};
+var DEF={provider:"gemini",models:{gemini:"gemini-flash-latest",claude:"claude-sonnet-5-5"},theme:"auto"};
 function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-var settings={},_sv=load("claude_settings",{});for(var _k in DEF)settings[_k]=(_sv&&_sv[_k]!=null)?_sv[_k]:DEF[_k];
+var _sv=load("claude_settings",{})||{};
+var settings={
+  provider:_sv.provider||(_sv.key?"claude":DEF.provider),
+  keys:{gemini:(_sv.keys&&_sv.keys.gemini)||"",claude:(_sv.keys&&_sv.keys.claude)||(!_sv.provider&&_sv.key)||""},
+  models:{gemini:(_sv.models&&_sv.models.gemini)||DEF.models.gemini,claude:(_sv.models&&_sv.models.claude)||(!_sv.provider&&_sv.model)||DEF.models.claude},
+  theme:_sv.theme||DEF.theme
+};
 var chats=load("claude_chats",[]);
 var cur=load("claude_cur",null);
 var busy=false,pending=null,live=null,sc=null,raf=0,barsReady=false;
