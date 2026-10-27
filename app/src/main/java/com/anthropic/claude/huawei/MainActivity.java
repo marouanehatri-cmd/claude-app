@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView v, String url) {
                 v.postDelayed(() -> v.evaluateJavascript(
-                        "(window.__boot?'boot=1':'boot=0')+' init='+(window.__ok||'NO')",
+                        "'boot='+(window.__boot||0)+' stage='+(window.__stage||'none')+' init='+(window.__ok||'NO')",
                         val -> Toast.makeText(MainActivity.this, "JS: " + val, Toast.LENGTH_LONG).show()), 3000);
             }
         });
@@ -244,4 +244,4 @@ public class MainActivity extends Activity {
             if (!"true".equals(value)) finish();
         });
     }
-}
+                    }
