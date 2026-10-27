@@ -174,12 +174,15 @@ header .ib:active{background:var(--user)}
 
 <div id="toast"></div>
 <div id="errbox"></div>
+<noscript><div style="position:fixed;top:90px;left:8px;right:8px;z-index:300;background:#7a1f12;color:#fff;padding:10px;border-radius:10px">JavaScript is OFF in this WebView</div></noscript>
 <script>
 window.onerror=function(m,src,l,c){var e=document.getElementById("errbox");e.style.display="block";e.textContent+="JS error: "+m+" (line "+l+")\n";return false};
 setTimeout(function(){var sp=document.getElementById("splash");if(sp)sp.classList.add("out")},1800);
+window.__boot=1;
 </script>
 
 <script>
+try{
 (function(){
   var $=function(id){return document.getElementById(id)};
   var hasBridge=typeof Android!=="undefined";
@@ -192,13 +195,13 @@ setTimeout(function(){var sp=document.getElementById("splash");if(sp)sp.classLis
   var DEF={key:"",model:"claude-sonnet-5-5",theme:"auto"};
   function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
   function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-  var settings=Object.assign({},DEF,load("claude_settings",{}));
+  var settings={},_sv=load("claude_settings",{});for(var _k in DEF)settings[_k]=(_sv&&_sv[_k]!=null)?_sv[_k]:DEF[_k];
   var chats=load("claude_chats",[]);
   var cur=load("claude_cur",null);
   var busy=false,pending=null,live=null,sc=null,raf=0,barsReady=false;
 
   function persist(){save("claude_chats",chats);save("claude_cur",cur)}
-  function getChat(){return chats.find(function(c){return c.id===cur})}
+  function getChat(){for(var i=0;i<chats.length;i++){if(chats[i].id===cur)return chats[i]}return undefined}
 
   /* ---------- theme ---------- */
   function applyTheme(){
@@ -343,14 +346,4 @@ setTimeout(function(){var sp=document.getElementById("splash");if(sp)sp.classLis
     inp.style.height="auto";inp.style.height=Math.min(inp.scrollHeight,130)+"px";
     if(!busy)sendBtn.disabled=!inp.value.trim();
   });
-  sendBtn.onclick=function(){busy?stop():doSend()};
-  setBusy(false);
-
-  function doSend(){
-    var text=inp.value.trim();
-    if(!text||busy)return;
-    if(!settings.key){toast("Add your API key in Settings");openSheet();return}
-    buzz(25);
-    if(!getChat())newChat();
-    var c=getChat();
-    c.msgs.push({r:"us
+  sendBtn.oncl
